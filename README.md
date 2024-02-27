@@ -2,6 +2,10 @@
 release目录下有生成测试文件
 简单的使用FFT画图,选择启动项Bezeir编译生成.
 
+![GIF 2024-2-27 10-33-08](https://github.com/LQtestProj/test_1/assets/161401866/c7c554b6-2e6d-4493-b75c-23d3533182e4)
+
+
+
 ![截图未命名0227101312](https://github.com/LQtestProj/test_1/assets/161401866/ffc2f3a7-0d4b-4c36-8271-cde5aa8eaff7)
 
 当运行目录内有b.bmp时会直接读取,注意画布大小不要修改,否则会出现绘制出界内存申请失败等问题
