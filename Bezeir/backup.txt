@@ -1,0 +1,172 @@
+	for (  i = 1; i < ptSize; i++) {
+		int j = 0;
+		isIn = FALSE;
+		isOut = FALSE;
+		pt1 = tmpPt[ptIndex];
+
+		cx1 = pt1->x;
+		cy1 = pt1->y;
+		iSubpt1 = ((preSubpt + (subPtLen >> 1)) % subPtLen + 1) % subPtLen;
+		for (; j <= subPtLen; j++) {
+			iSubpt2 = (j % subPtLen + iSubpt1) % subPtLen;
+			spt = subPt[iSubpt2];
+			cx2 = cx1 + spt.x;
+			cy2 = cy1 + spt.y;
+			if (cx2 < 0 || cy2 < 0) {
+				continue;
+			}
+			xx = bitmap.bmWidthBytes * cy2 + cx2 * step;
+			if (step == 1) {
+				t = r = g = (b = pBits[xx]);
+			}
+			else {
+				t = pBits[xx + 3]; r = pBits[xx + 2]; g = pBits[xx + 1]; b = pBits[xx + 0];
+			}
+			if (!isIn) {
+				if (r == iBlack && g == iBlack && b == iBlack) {
+					if (j == 0) {
+						isIn = TRUE;
+					}
+					else {
+						preSubpt = iSubpt2;
+						isOut = TRUE;
+						//	 TRACE(L"index:%d,x:%d,y:%d\n", i, cx2, cy2);
+						break;
+					}
+				}
+			}
+			else {
+				if (r == iWhite && g == iWhite && b == iWhite) {
+					isIn = FALSE;
+				}
+			}
+		}
+		if (!isOut) {
+			cx2 = cx1;
+			cy2 = cy1 - skip;
+
+			//TRACE(L"no found:%d,x:%d,y:%d\n", i, cx2, cy2);
+		}
+		isOut = TRUE;
+		j = 0;
+		for (j = 0; j < ptSize; j++) {
+			tmpPt1 = tmpPt[j];
+			if (tmpPt1->x == cx2 && tmpPt1->y == cy2) {
+				isOut = FALSE;
+				ptIndex = j;
+				//检查重复闭环
+				/*
+				for (int m = 0; m < linePtCount; m++) {
+					tmpPt2 = linePt[m];
+					if(tmpPt1==tmpPt2){
+						break;
+					}
+				}
+				*/
+				if (linePtCount > 1 && linePt[0] == tmpPt1) {
+					break;
+
+
+				}
+				break;
+			}
+		}
+		if (tmpPt1 == tmpPt2) {
+			if (tmpPt[0] != tmpPt1) {
+				::MessageBox(hwnd, L"图像路径未闭合或路径判断异常", NULL, MB_OK);
+				::DestroyWindow(hwnd);
+			}
+			TRACE(L"end pt:%d,x:%d,y:%d\n", i, cx2, cy2);
+			break;
+		}
+		if (linePtCount > 1 && tmpPt[0] == tmpPt1) {
+			TRACE(L"end pt:%d,x:%d,y:%d\n", i, cx2, cy2);
+			break;
+		}
+		if (--skipCount == 0) {
+			skipCount = skip;
+			linePt[linePtCount++] = tmpPt[ptIndex];
+		}
+		//TRACE(L"index:%d,x:%d,y:%d\n", i, tmpPt1->x, tmpPt1->y);
+	}
+	if (linePtCount > 1 && linePt[0] != tmpPt1) {
+		::MessageBox(hwnd, L"图像路径未闭合或路径判断异常", NULL, MB_OK);
+		::DestroyWindow(hwnd);
+		return NULL;
+	}
+
+
+
+
+	//压缩点到线
+	BOOLEAN sx = FALSE, sy = FALSE, ns = TRUE;
+	int isxs = 0, isys = 0, isxe = 0, isye = 0, offset = 2;
+	cx1 = cx2 = cy1 = (cy2 = 0);
+	_bitmapPt = new Point * [linePtCount];
+	::ZeroMemory(_bitmapPt, sizeof(Point*) * linePtCount);
+
+	for (int i = 0; i < linePtCount; i++) {
+		tmpPt1 = linePt[i];
+		cx1 = tmpPt1->x;
+		cy1 = tmpPt1->y;
+		if (i == 0) {
+			cx2 = cx1;
+			cy2 = cy1;
+			continue;
+		}
+		if (!sy) {
+			if (cx1 == cx2) {
+				if (!sx) {
+					isxs = i;
+				}
+				sx = TRUE;
+			}
+			else {
+				if (sx) {
+					ns = FALSE;
+					sx = FALSE;
+					isxe = i;
+					_bitmapPt[_pointCount++] = linePt[isxs];
+					_bitmapPt[_pointCount++] = linePt[isxe];
+				}
+			}
+		}
+		if (!sx) {
+			if (cy1 == cy2) {
+				if (!sy) {
+					isys = i;
+				}
+				sy = TRUE;
+			}
+			else {
+				if (sy) {
+					ns = FALSE;
+					sy = FALSE;
+					isye = i;
+					_bitmapPt[_pointCount++] = linePt[isys];
+					_bitmapPt[_pointCount++] = linePt[isye];
+				}
+			}
+		}
+		if (!sy && !sx && ns) {
+			_bitmapPt[_pointCount++] = linePt[i - 1];
+		}
+		cx2 = cx1;
+		cy2 = cy1;
+
+	}
+
+	for (int i = 0; i < _pointCount; i++) {
+		comList[i] = new ComplexNum;
+		tmpPt1 = _bitmapPt[i];
+		comList[i]->real = tmpPt1->x;
+		comList[i]->img = tmpPt1->y;
+
+		//	 TRACE(L"index:%d,x:%f,y:%f\n", i, comList[i]->real, comList[i]->img);
+	}
+
+
+	free(pBits);
+	delete linePt;
+	DeleteCache((VOID**)tmpPt, ptSize);
+	outPtSize = _pointCount;
